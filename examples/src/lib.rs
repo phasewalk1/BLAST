@@ -10,10 +10,10 @@ extern crate thiserror;
 #[cfg(feature = "rocket")]
 mod interface_example {
     use blast_interface::error as blast;
-    use blast_macros::{Codes, Responder};
+    use blast_macros::{Codes, MakeResponder};
     use thiserror::Error as ThisError;
 
-    #[derive(Codes, Responder, Clone, Debug, ThisError, PartialEq, Eq)]
+    #[derive(Codes, MakeResponder, Clone, Debug, ThisError, PartialEq, Eq)]
     #[rustfmt::skip]
     enum MyAppError {
         #[error("failed to update counter!")]
@@ -44,11 +44,11 @@ mod interface_example {
 }
 
 mod macros_example {
-    use blast_macros::{Codes, Responder};
+    use blast_macros::{Codes, MakeResponder};
     use thiserror::Error as ThisError;
 
-    #[derive(Codes, Responder, Clone, Debug, ThisError, PartialEq, Eq)]
-    #[rustfmt::skip]
+    #[derive(Codes, MakeResponder, Clone, Debug, ThisError, PartialEq, Eq)]
+    #[rustfmt::skip] 
     pub enum AppError {
         /// failed unlock a connection from the pool.
         #[error("failed to get connection pool!")]

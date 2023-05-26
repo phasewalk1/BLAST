@@ -9,7 +9,7 @@ use quote::quote;
 use syn::{parse_macro_input, Attribute, DeriveInput, Lit, Meta, NestedMeta};
 
 /// Derive the `Responder` trait for an enum of application errors.
-#[proc_macro_derive(Responder)]
+#[proc_macro_derive(MakeResponder)]
 pub fn derive_to_responder(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 

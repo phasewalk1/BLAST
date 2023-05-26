@@ -3,9 +3,17 @@ name = "example"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "readme"
+path = "src/bin/readme.rs"
+
 [dependencies]
 thiserror = "1.0.40"
-rocket = { version = "0.5.0-rc.3", default-features = false }
+rocket = { version = "0.5.0-rc.3", default-features = false, features = ["json"] }
+serde = { version = "1.0.130", features = ["derive"] }
+
+[dependencies.blast]
+path = "../blast"
 
 [dependencies.blast-macros]
 path = "../blast-macros"
