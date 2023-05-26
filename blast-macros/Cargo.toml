@@ -1,12 +1,12 @@
 [package]
-name = "blast"
+name = "blast-macros"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/phasewalk1/blast"
 
 [lib]
 proc-macro = true
-name = "blast"
+name = "blast_macros"
 path = "src/lib.rs"
 
 [dependencies]

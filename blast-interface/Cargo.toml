@@ -1,0 +1,12 @@
+[package]
+name = "blast-interface"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+thiserror = "1.0.40"
+rocket = { version = "0.5.0-rc.3", features = ["json"], optional = true }
+
+[dev-dependencies]
+thiserror = "*"
+blast-macros = { path = "../blast-macros" }

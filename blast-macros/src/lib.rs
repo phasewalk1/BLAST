@@ -8,8 +8,32 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, Attribute, DeriveInput, Lit, Meta, NestedMeta};
 
-/// Derive the `Into<rocket::http::Status>` trait for an enum.
-#[proc_macro_derive(ToStatus, attributes(give))]
+/// Derive the `Responder` trait for an enum of application errors.
+#[proc_macro_derive(Responder)]
+pub fn derive_to_responder(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    let name = &input.ident;
+
+    match &input.data {
+        syn::Data::Enum(_) => {}
+        _ => panic!("This macro only works with Enums"),
+    };
+
+    let expanded = quote! {
+        impl<'r> rocket::response::Responder<'r, 'static> for #name {
+            fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
+                let status: rocket::http::Status = self.into();
+                return status.respond_to(req);
+            }
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
+/// Derive the `From<YourEnum> for rocket::http::Status` trait for an enum.
+#[proc_macro_derive(Codes, attributes(give))]
 pub fn derive_to_status(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
@@ -32,9 +56,9 @@ pub fn derive_to_status(input: TokenStream) -> TokenStream {
     };
 
     let expanded = quote! {
-        impl Into<rocket::http::Status> for #name {
-            fn into(self) -> rocket::http::Status {
-                match self {
+        impl From<#name> for rocket::http::Status {
+            fn from(error: #name) -> rocket::http::Status {
+                match error {
                     #(#status_codes)*
                 }
             }
