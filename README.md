@@ -1,4 +1,8 @@
 
+# Project Title
+
+A brief description of what this project does and who it's for
+
 # BLAST!
 
 Idomatic Rust utility that makes backend fun again.
@@ -19,6 +23,7 @@ use blast::macros::{Codes, MakeResponder};
 use rocket::serde::json::Json;
 use thiserror::Error as ThisError;
 
+// Our custom application errors.
 #[derive(Codes, Clone, Debug, Eq, PartialEq, MakeResponder, ThisError)]
 enum AppErr {
     #[error("Not found")]
@@ -32,43 +37,54 @@ enum AppErr {
     _Internal,
 }
 
+// Our sample app has only one route that returns a JSON string.
 #[repr(transparent)]
 #[derive(Debug, serde::Serialize, PartialEq, Eq)]
 struct AppResponse(String);
 
+// Sample validation
 fn invalid_parameter(s: &str) -> bool {
     return s.len() > 30 || s.is_empty();
 }
 
-fn index_fn(name: &str) -> Result<Json<AppResponse>, AppErr> {
-    match invalid_parameter(name) {
+// Sample index route handler.
+//
+// This is made possible by the `MakeResponder` and `Codes` traits,
+// which implements `rocket::response::Responder` for us.
+#[get("/?<name>")]
+fn index_fn(name: String) -> Result<Json<AppResponse>, AppErr> {
+    match invalid_parameter(&name) {
+        // Return a custom error on failure, which gets decoded
+        // to an http status code, and returned with a default body.
         true => return Err(AppErr::InvalidField),
         false => return Ok(Json(AppResponse(name.to_string()))),
     }
 }
 
+// Demonstrate `Codes` functionality
 #[cfg(test)]
-#[test] fn test_index_fn() {
+#[test] fn demonstrate() {
+    // Because we derived `Codes`, we get `rocket::http::Status: From<AppErr>` for free. 
     use rocket::http::Status;
     use AppErr::*;
 
-    let mut invalid = String::new();
-    for _ in 0..31 {
-        invalid.push('a');
-    }
-    assert_eq!(index_fn(&invalid), Err(InvalidField));
-    assert_eq!(index_fn(""), Err(InvalidField));
+    // Use the `Status: From<AppErr>` impl to convert our custom error to status codes.
+    let invalid_field: Status = InvalidField.into();
+    let internal: Status = _Internal.into();
+    let not_found: Status = _NotFound.into();
+
+    assert_eq!(invalid_field.code, 400u16);
+    assert_eq!(internal.code, 500u16);
+    assert_eq!(not_found.code, 404u16);
+
+    // Or, a more verbose way of saying the same thing.
     assert_eq!(<AppErr as Into<Status>>::into(InvalidField).code, 400u16);
 }
 
-#[get("/?<name>")]
-fn index(name: String) -> Result<Json<AppResponse>, AppErr> {
-    return index_fn(&name);
-}
-
+// Build and launch our sample app as usual.
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![index])
+    rocket::build().mount("/", routes![index_fn])
 }
 
 ```
