@@ -1,16 +1,8 @@
-# Blast - HTTP Status Code Derivation
 
-Welcome to the Blast library! This Rust library provides a procedural macro to derive the `From` trait for an enum to convert it into `rocket::http::Status`. Each variant of the enum can be annotated with an HTTP status code using the `give` attribute.
+# BLAST!
 
-## Features
+Idomatic Rust utility that makes backend fun again.
 
-- Automatic implementation of `From<YourEnum>` for `rocket::http::Status`.
-- Easy annotation of enum variants with HTTP status codes.
 
-## Installation
-
-Add this to your `Cargo.toml`:
-
-```toml
-[dependencies]
-blast = "0.1.0"
+## Overview
+_BLAST!_ is a collection of utilities I've slowly been amassing that I find myself reaching for across various backend domains; I've decided to encapsulate them into a library partly as convenience for me but mainly to share them with you, in hopes they might find some use in your code too.
