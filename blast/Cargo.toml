@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 blast-macros = { path = "../blast-macros" }
 blast-interface = { path = "../blast-interface", features = ["rocket"] }
+rocket = { version = "0.5.0-rc.3", features = ["json"], optional = true }
+paste = "*"

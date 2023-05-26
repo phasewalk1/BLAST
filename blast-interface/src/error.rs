@@ -39,27 +39,3 @@ where
         return Self::from(error);
     }
 }
-
-#[cfg(test)]
-#[cfg(feature = "rocket")]
-mod rocket_test {
-    use super::*;
-    use blast_macros::Codes;
-
-    #[derive(Codes, Debug, thiserror::Error, Clone, PartialEq, Eq)]
-    enum Err {
-        #[error("bad request")]
-        #[give(404)]
-        NotFound,
-    }
-
-    impl Error for Err {
-        type Yield = rocket::http::Status;
-    }
-
-    #[test]
-    fn test_interface_error() {
-        let err = Err::NotFound;
-        assert_eq!(err.make_response(), rocket::http::Status::NotFound);
-    }
-}

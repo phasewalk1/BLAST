@@ -1,2 +1,2 @@
 [workspace]
-members = ["blast", "blast-macros", "blast-interface", "examples"]
+members = ["blast", "blast-macros", "blast-interface"]
