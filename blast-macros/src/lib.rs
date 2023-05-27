@@ -3,6 +3,9 @@ extern crate blast_proc_macros;
 extern crate rocket;
 
 #[allow(unused_imports)]
+use blast_interface::error::Respondable;
+
+#[allow(unused_imports)]
 use rocket::catch;
 
 #[macro_export]
@@ -42,7 +45,7 @@ macro_rules! maperr {
     // Generated error interface extension
     //
     // Made by blast-macros <3
-    impl blast_interface::error::Respondable<$enum> for $enum {
+    impl Respondable<$enum> for $enum {
         type Payload = rocket::http::Status;
     }
 };
