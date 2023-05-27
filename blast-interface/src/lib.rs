@@ -1,6 +1,6 @@
 #![feature(associated_type_defaults)]
 pub mod error;
-pub mod operation;
+pub mod state;
 
 #[cfg(test)]
 extern crate blast_macros;

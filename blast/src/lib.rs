@@ -8,7 +8,9 @@ pub use blast_interface as interface;
 
 pub mod macros {
     pub use blast_macros::{catchers, maperr};
-    pub use blast_proc_macros::{snake_case_catcher as snake_trap, MakeResponder};
+    pub use blast_proc_macros::{
+        make_stateful, snake_case_catcher as snake_trap, Limiter, MakeResponder,
+    };
 }
 
 #[cfg(test)]

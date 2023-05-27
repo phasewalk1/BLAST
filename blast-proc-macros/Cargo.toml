@@ -15,3 +15,6 @@ quote = "1.0"
 proc-macro2 = "1.0"
 rocket = "0.5.0-rc.3"
 heck = "0.4.1"
+
+[dependencies.blast-interface]
+path = "../blast-interface"
