@@ -7,15 +7,15 @@ pub extern crate blast_proc_macros;
 pub use blast_interface as interface;
 
 pub mod macros {
-    pub use blast_macros::*;
-    pub use blast_proc_macros::*;
+    pub use blast_macros::{catchers, maperr};
+    pub use blast_proc_macros::{snake_case_catcher as snake_trap, MakeResponder};
 }
 
 #[cfg(test)]
 mod rocket_test {
     use crate::interface::error::*;
     use crate::macros::MakeResponder as Response;
-    use rocket::{catch, http::Status, Request};
+    use rocket::http::Status;
 
     #[derive(Debug, Response, Clone, PartialEq, Eq)]
     pub enum MyErr {
