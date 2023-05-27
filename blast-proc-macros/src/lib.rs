@@ -4,53 +4,98 @@ extern crate rocket;
 extern crate syn;
 
 use heck::ToSnakeCase;
-use proc_macro::TokenStream;
+use proc_macro::{TokenStream, TokenTree};
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Ident, LitInt};
+use syn::{parse_macro_input, Data, DeriveInput, LitInt, Token};
 
 #[proc_macro]
 pub fn make_stateful(input: TokenStream) -> TokenStream {
-    let input = syn::parse_macro_input!(input as syn::DeriveInput);
-    let args = input.data;
+    struct Params {
+        guts_ident: proc_macro::Ident,
+        pure_ident: proc_macro::Ident,
+        yield_ident: proc_macro::Ident,
+    }
 
-    let (guts_ident, pure_ident): (Ident, Ident) = match args {
-        syn::Data::Struct(s) => {
-            let guts_ident = s
-                .fields
-                .iter()
-                .find(|f| f.ident.as_ref().unwrap() == "GUTS")
-                .unwrap()
-                .ty
-                .clone();
-            let pure_ident = s
-                .fields
-                .iter()
-                .find(|f| f.ident.as_ref().unwrap() == "PURE")
-                .unwrap()
-                .ty
-                .clone();
-            // turn tys into idents
-            let guts_ident = match guts_ident {
-                syn::Type::Path(p) => p.path.segments[0].ident.clone(),
-                _ => panic!("Invalid input"),
-            };
-            let pure_ident = match pure_ident {
-                syn::Type::Path(p) => p.path.segments[0].ident.clone(),
-                _ => panic!("Invalid input"),
-            };
-            (guts_ident, pure_ident)
+    fn has(target: &str, input: Option<TokenTree>) -> bool {
+        let _has = match input {
+            Some(TokenTree::Ident(ident)) => match ident {
+                ident if ident.to_string() == target => true,
+                _ => false,
+            },
+            _ => false,
+        };
+        return _has;
+    }
+
+    impl Params {
+        pub(crate) fn idents(&self) -> (syn::Ident, syn::Ident, syn::Ident) {
+            // turn the proc_macro::Ident into syn::Ident
+            let syn_guts: syn::Ident =
+                syn::Ident::new(&self.guts_ident.to_string(), self.guts_ident.span().into());
+            let syn_pure: syn::Ident =
+                syn::Ident::new(&self.pure_ident.to_string(), self.pure_ident.span().into());
+            let syn_yield: syn::Ident = syn::Ident::new(
+                &self.yield_ident.to_string(),
+                self.yield_ident.span().into(),
+            );
+
+            return (syn_pure, syn_guts, syn_yield);
         }
-        _ => panic!("Invalid input"),
-    };
+        // Parse the input tokens into a syntax tree to extract all 3 parameters
+        fn from_input(input: TokenStream) -> Params {
+            // Iterate over the TokenStream
+            let mut token_iter = input.into_iter();
+            // The first token should be IDENT 'GUTS'
+            let has_guts = has("GUTS", token_iter.next());
+            let gut_ident = match has_guts {
+                true => match token_iter.next() {
+                    Some(TokenTree::Ident(ident)) => ident,
+                    _ => panic!("Expected IDENT for GUTS"),
+                },
+                false => panic!("Expected IDENT 'GUTS'"),
+            };
+            // tick comma
+            let _ = token_iter.next();
+            let has_pure = has("PURE", token_iter.next());
+            let pure_ident = match has_pure {
+                true => match token_iter.next() {
+                    Some(TokenTree::Ident(ident)) => ident,
+                    _ => panic!("Expected IDENT for PURE"),
+                },
+                false => panic!("Expected IDENT 'PURE'"),
+            };
+            // tick comma
+            let _ = token_iter.next();
+            let has_yield = has("YIELD", token_iter.next());
+            let yield_ident = match has_yield {
+                true => match token_iter.next() {
+                    Some(TokenTree::Ident(ident)) => ident,
+                    _ => panic!("Expected IDENT for YIELD"),
+                },
+                false => panic!("Expected IDENT 'YIELD'"),
+            };
 
-    let output: proc_macro2::TokenStream = quote! {
+            return Params {
+                guts_ident: gut_ident,
+                pure_ident: pure_ident,
+                yield_ident: yield_ident,
+            };
+        }
+    }
+
+    let params = Params::from_input(input);
+
+    let (pure_ident, guts_ident, yield_ident) = params.idents();
+
+    let output = quote! {
         impl BlastState for #pure_ident {
             type Inner = Arc<#guts_ident>;
         }
-        impl State for #pure_ident {}
+        impl #yield_ident for #pure_ident {}
     };
 
-    TokenStream::from(output)
+    // Return the generated output as a token stream
+    output.into()
 }
 
 #[proc_macro]
