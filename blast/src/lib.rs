@@ -1,76 +1,56 @@
-#![cfg(feature = "rocket")]
 #[allow(unused_imports)]
 #[macro_use]
 pub extern crate blast_macros;
 pub extern crate blast_interface;
+pub extern crate blast_proc_macros;
 
 pub use blast_interface as interface;
 
 pub mod macros {
     pub use blast_macros::*;
-
-    #[cfg(feature = "rocket")]
-    #[macro_export]
-    macro_rules! maperr {
-    (on $enum:ident ... $($variant:ident => $code:expr),* $(,)?) => {
-        impl From<$enum> for rocket::http::Status {
-            fn from(error: $enum) -> rocket::http::Status {
-                match error {
-                    $($enum::$variant => rocket::http::Status::from_code($code).unwrap(),)*
-                }
-            }
-        }
-    };
-	}
+    pub use blast_proc_macros::*;
 }
 
-#[cfg(feature = "rocket")]
 #[cfg(test)]
-mod macro_test {
-    use super::macros::*;
-    use rocket::http::Status;
+mod rocket_test {
+    use crate::interface::error::*;
+    use crate::macros::MakeResponder as Response;
+    use rocket::{catch, http::Status, Request};
 
-    #[derive(Debug, PartialEq)]
-    pub enum AppError {
+    #[derive(Debug, Response, Clone, PartialEq, Eq)]
+    pub enum MyErr {
         NotFound,
         InternalError,
     }
 
-    crate::maperr! {
-        on AppError ...
+    use MyErr::*;
+
+    impl Error for MyErr {}
+
+    crate::macros::maperr! {
+        on MyErr ...
         NotFound => 404,
         InternalError => 500,
     }
 
-    #[test]
-    fn test_maperr() {
-        // fat enum
-        use AppError::*;
-
-        let not_found: Status = NotFound.into();
-        let internal: Status = InternalError.into();
-
-        assert_eq!(Status::NotFound, not_found);
-        assert_eq!(Status::InternalServerError, internal);
+    mod catcher {
+        use super::MyErr;
+        crate::macros::catchers! (
+            using MyErr ...
+            not_found_catcher,      NotFound      => ((404, R)),
+            internal_error_catcher, InternalError => ((500, R)),
+        );
     }
 
     #[test]
-    fn readme() {
-        #[derive(MakeResponder)]
-        enum AppError {
-            NotFound,
-            InternalError,
-        }
-        crate::maperr! {
-            on AppError ...
-            NotFound => 404,
-            InternalError => 500,
-        }
-        
-        let not_found: Status = AppError::NotFound.into();
-        let internal: Status = AppError::InternalError.into();
+    fn test_err() {
+        let not_found: Status = NotFound.wrap();
+        let internal: Status = InternalError.wrap();
 
         assert_eq!(Status::NotFound, not_found);
         assert_eq!(Status::InternalServerError, internal);
+
+        #[allow(unused_imports)]
+        use catcher::{default_catcher, internal_error_catcher, not_found_catcher};
     }
 }

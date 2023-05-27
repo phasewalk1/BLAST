@@ -1,33 +1,68 @@
-extern crate proc_macro;
-extern crate quote;
+extern crate blast_interface;
+extern crate blast_proc_macros;
 extern crate rocket;
-extern crate syn;
 
-// lib.rs
-use proc_macro::TokenStream;
-use quote::quote;
-use syn::{parse_macro_input, Attribute, DeriveInput, Lit, Meta, NestedMeta};
+#[allow(unused_imports)]
+use rocket::catch;
 
-/// Derive the `Responder` trait for an enum of application errors.
-#[proc_macro_derive(MakeResponder)]
-pub fn derive_to_responder(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-
-    let name = &input.ident;
-
-    match &input.data {
-        syn::Data::Enum(_) => {}
-        _ => panic!("This macro only works with Enums"),
-    };
-
-    let expanded = quote! {
-        impl<'r> rocket::response::Responder<'r, 'static> for #name {
-            fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
-                let status: rocket::http::Status = self.into();
-                return status.respond_to(req);
+#[macro_export]
+macro_rules! maperr {
+(on $enum:ident ... $($variant:ident => $code:expr),* $(,)?) => {
+    // Generated implementation of From<$enum> for rocket::http::Status
+    //
+    // Made by blast-macros <3
+    impl From<$enum> for rocket::http::Status {
+        fn from(error: $enum) -> rocket::http::Status {
+            match error {
+                $($enum::$variant => rocket::http::Status::from_code($code).unwrap(),)*
             }
         }
-    };
+    }
 
-    TokenStream::from(expanded)
+    impl Into<$enum> for rocket::http::Status {
+        fn into(self) -> $enum {
+            let code = self.code;
+            match code {
+                $($code => $enum::$variant,)*
+                _ => panic!("Invalid status code"),
+            }
+        }
+    }
+
+    impl From<(rocket::http::Status, &rocket::Request<'_>)> for $enum {
+        fn from((status, req): (rocket::http::Status, &rocket::Request<'_>)) -> $enum {
+            let code = status.code;
+            match code {
+                $($code => $enum::$variant,)*
+                _ => panic!("Invalid status code"),
+            }
+        }
+    }
+
+    // Generated error interface extension
+    //
+    // Made by blast-macros <3
+    impl blast_interface::error::Respondable<$enum> for $enum {
+        type Payload = rocket::http::Status;
+    }
+};
+}
+
+#[macro_export]
+macro_rules! catchers {
+    (using $enum:ident ... $($func_name:ident, $variant:ident => (($code:expr, $req:ident))),* $(,)?) => {
+        /// Catches HTTP errors and coerces them into custom AppErrors.
+        #[catch(default)]
+        pub async fn default_catcher(status: rocket::http::Status, req: &rocket::Request<'_>) -> $enum {
+            return $enum::from((status, req));
+        }
+
+        $(
+            /// Catches specific HTTP errors.
+            #[catch($code)]
+            pub async fn $func_name(req: &rocket::Request<'_>) -> $enum {
+                return $enum::from((rocket::http::Status::from_code($code).unwrap(), req));
+            }
+        )*
+    };
 }

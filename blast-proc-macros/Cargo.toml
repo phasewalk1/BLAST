@@ -1,0 +1,17 @@
+[package]
+name = "blast-proc-macros"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/phasewalk1/blast"
+
+[lib]
+proc-macro = true
+name = "blast_proc_macros"
+path = "src/lib.rs"
+
+[dependencies]
+syn = "1.0"
+quote = "1.0"
+proc-macro2 = "1.0"
+rocket = "0.5.0-rc.3"
+heck = "0.4.1"

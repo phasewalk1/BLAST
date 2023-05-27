@@ -2,15 +2,10 @@
 name = "blast-macros"
 version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/phasewalk1/blast"
 
-[lib]
-proc-macro = true
-name = "blast_macros"
-path = "src/lib.rs"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-syn = "1.0"
-quote = "1.0"
-proc-macro2 = "1.0"
 rocket = "0.5.0-rc.3"
+blast-interface = { path = "../blast-interface" }
+blast-proc-macros = { path = "../blast-proc-macros" }
