@@ -6,8 +6,9 @@ extern crate syn;
 use heck::ToSnakeCase;
 use proc_macro::{TokenStream, TokenTree};
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, LitInt, Token};
+use syn::{parse_macro_input, Data, DeriveInput, LitInt};
 
+/// Programatically derive the `BlastState` trait for a struct.
 #[proc_macro]
 pub fn make_stateful(input: TokenStream) -> TokenStream {
     struct Params {
@@ -16,15 +17,17 @@ pub fn make_stateful(input: TokenStream) -> TokenStream {
         yield_ident: proc_macro::Ident,
     }
 
-    fn has(target: &str, input: Option<TokenTree>) -> bool {
-        let _has = match input {
-            Some(TokenTree::Ident(ident)) => match ident {
-                ident if ident.to_string() == target => true,
-                _ => false,
-            },
-            _ => false,
-        };
-        return _has;
+    fn find_ident(tokens_iter: &mut impl Iterator<Item = TokenTree>, target: &str) -> Option<proc_macro::Ident> {
+        while let Some(token) = tokens_iter.next() {
+            if let TokenTree::Ident(ident) = token {
+                if ident.to_string() == target {
+                    if let Some(TokenTree::Ident(ident)) = tokens_iter.next() {
+                        return Some(ident);
+                    }
+                } 
+            }
+        }
+        return None;
     }
 
     impl Params {
@@ -41,52 +44,43 @@ pub fn make_stateful(input: TokenStream) -> TokenStream {
 
             return (syn_pure, syn_guts, syn_yield);
         }
-        // Parse the input tokens into a syntax tree to extract all 3 parameters
-        fn from_input(input: TokenStream) -> Params {
-            // Iterate over the TokenStream
-            let mut token_iter = input.into_iter();
-            // The first token should be IDENT 'GUTS'
-            let has_guts = has("GUTS", token_iter.next());
-            let gut_ident = match has_guts {
-                true => match token_iter.next() {
-                    Some(TokenTree::Ident(ident)) => ident,
-                    _ => panic!("Expected IDENT for GUTS"),
-                },
-                false => panic!("Expected IDENT 'GUTS'"),
-            };
-            // tick comma
-            let _ = token_iter.next();
-            let has_pure = has("PURE", token_iter.next());
-            let pure_ident = match has_pure {
-                true => match token_iter.next() {
-                    Some(TokenTree::Ident(ident)) => ident,
-                    _ => panic!("Expected IDENT for PURE"),
-                },
-                false => panic!("Expected IDENT 'PURE'"),
-            };
-            // tick comma
-            let _ = token_iter.next();
-            let has_yield = has("YIELD", token_iter.next());
-            let yield_ident = match has_yield {
-                true => match token_iter.next() {
-                    Some(TokenTree::Ident(ident)) => ident,
-                    _ => panic!("Expected IDENT for YIELD"),
-                },
-                false => panic!("Expected IDENT 'YIELD'"),
-            };
 
-            return Params {
-                guts_ident: gut_ident,
-                pure_ident: pure_ident,
-                yield_ident: yield_ident,
-            };
+        fn from_input(input: TokenStream) -> Params {
+            // Convert the TokenStream into a Vec<TokenTree> for easier manipulation
+            let tokens: Vec<_> = input.into_iter().collect();
+
+            // Ensure that the number of tokens is correct
+            if tokens.len() < 8 {
+                panic!("Expected GUTS, PURE, and YIELD");
+            }
+
+            // Create an iterator over the tokens
+            let mut tokens_iter = tokens.into_iter().peekable();
+
+            // Find the `GUTS` identifier
+            let guts_ident = find_ident(&mut tokens_iter, "GUTS");
+
+            // Find the `PURE` identifier
+            let pure_ident = find_ident(&mut tokens_iter, "PURE");
+
+            // Find the `YIELD` identifier
+            let yield_ident = find_ident(&mut tokens_iter, "YIELD");
+
+            // Ensure that all parameters are present
+            if guts_ident.is_none() || pure_ident.is_none() || yield_ident.is_none() {
+                panic!("Expected GUTS, PURE, and YIELD");
+            }
+
+            Params {
+                guts_ident: guts_ident.unwrap(),
+                pure_ident: pure_ident.unwrap(),
+                yield_ident: yield_ident.unwrap(),
+            }
         }
     }
 
     let params = Params::from_input(input);
-
     let (pure_ident, guts_ident, yield_ident) = params.idents();
-
     let output = quote! {
         impl BlastState for #pure_ident {
             type Inner = Arc<#guts_ident>;
@@ -94,21 +88,21 @@ pub fn make_stateful(input: TokenStream) -> TokenStream {
         impl #yield_ident for #pure_ident {}
     };
 
-    // Return the generated output as a token stream
-    output.into()
+    return output.into()
 }
 
+/// Convert a CamelCase identifier into snake_case.
 #[proc_macro]
-pub fn snake_case_catcher(input: TokenStream) -> TokenStream {
+pub fn snake_trap(input: TokenStream) -> TokenStream {
     let ident = parse_macro_input!(input as syn::Ident);
     let ident_str = ident.to_string();
     let snake_case_ident = ident_str.to_snake_case();
-    let snake_case_catcher = format!("{}_catcher", snake_case_ident);
+    let snake_case_catcher = format!("{}", snake_case_ident);
     let new_ident = syn::Ident::new(&snake_case_catcher, ident.span());
     quote!(#new_ident).into()
 }
 
-/// Derive the `Responder` trait for an enum of application errors.
+/// Derive the rocket `Responder` trait for an enum of application errors.
 #[proc_macro_derive(MakeResponder)]
 pub fn derive_to_responder(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -133,6 +127,7 @@ pub fn derive_to_responder(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
+/// Implement a governable rocket limiter for a custom limiter struct.
 #[proc_macro_derive(Limiter, attributes(rate))]
 pub fn limiter_macro(input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
